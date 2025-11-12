@@ -1,0 +1,11 @@
+databaseChangeLog:
+  - include:
+      file: changeset/create-order-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changeset/create-item-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changeset/create-payment-table.yaml
+      relativeToChangelogFile: true
+

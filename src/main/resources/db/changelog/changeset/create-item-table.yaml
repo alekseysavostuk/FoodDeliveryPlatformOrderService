@@ -1,0 +1,35 @@
+databaseChangeLog:
+  - changeSet:
+      id: create_item_table
+      author: Aleksey
+      changes:
+        - createTable:
+            tableName: order_item
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    unique: true
+              - column:
+                  name: quantity
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price
+                  type: NUMERIC(8, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: dish_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: order_id
+                  type: uuid
+                  constraints:
+                    nullable: false
