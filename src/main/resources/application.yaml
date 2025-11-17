@@ -1,4 +1,7 @@
 spring:
+  cloud:
+    compatibility-verifier:
+      enabled: false
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
@@ -19,5 +22,27 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 server:
   port: 8080
+security:
+  jwt:
+    secret: ${JWT_SECRET}
 springdoc:
   override-with-generic-response: false
+feign:
+  circuit breaker:
+    enabled: true
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 5000
+restaurant:
+  service:
+    url: http://restaurant:8080/api/v1
+resilience4j:
+  circuitbreaker:
+    instances:
+      restaurant-service:
+        registerHealthIndicator: true
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        slidingWindowSize: 10

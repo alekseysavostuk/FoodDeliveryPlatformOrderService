@@ -20,4 +20,13 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
     @Query(value = "SELECT * FROM order_item WHERE order_id = :orderId", nativeQuery = true)
     List<Item> findAllByOrderId(@Param("orderId") UUID orderId);
 
+    @Query(value = """
+            SELECT EXISTS(
+                SELECT 1 FROM order_item i 
+                JOIN orders o ON i.order_id = o.id 
+                WHERE i.id = :itemId AND o.user_id = :userId
+            )""",
+            nativeQuery = true)
+    boolean existsByIdAndOrderUserId(@Param("itemId") UUID itemId, @Param("userId") UUID userId);
+
 }

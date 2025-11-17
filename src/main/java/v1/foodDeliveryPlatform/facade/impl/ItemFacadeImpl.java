@@ -1,6 +1,7 @@
 package v1.foodDeliveryPlatform.facade.impl;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import v1.foodDeliveryPlatform.dto.model.ItemDto;
 import v1.foodDeliveryPlatform.facade.ItemFacade;
@@ -13,6 +14,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 @AllArgsConstructor
 public class ItemFacadeImpl implements ItemFacade {
 

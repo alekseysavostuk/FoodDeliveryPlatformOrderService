@@ -11,7 +11,7 @@ public interface OrderService {
 
     Order getById(UUID id);
 
-    Order createOrder(UUID userId, UUID restaurantId, List<Item> items);
+    Order createOrder(UUID restaurantId, List<Item> items);
 
     List<Order> getAll();
 

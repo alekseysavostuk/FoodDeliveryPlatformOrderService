@@ -31,8 +31,6 @@ public class OrderDto {
 
     private LocalDateTime orderDate;
 
-    @NotNull(message = "User id must be not null",
-            groups = {OnCreate.class, OnUpdate.class})
     private UUID userId;
 
     @NotNull(message = "Restaurant id must be not null",

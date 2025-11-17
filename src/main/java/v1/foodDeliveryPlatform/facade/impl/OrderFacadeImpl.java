@@ -1,6 +1,7 @@
 package v1.foodDeliveryPlatform.facade.impl;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import v1.foodDeliveryPlatform.dto.model.ItemDto;
 import v1.foodDeliveryPlatform.dto.model.OrderDto;
@@ -16,6 +17,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 @AllArgsConstructor
 public class OrderFacadeImpl implements OrderFacade {
 
@@ -29,12 +31,11 @@ public class OrderFacadeImpl implements OrderFacade {
     }
 
     @Override
-    public OrderDto createOrder(UUID userId, UUID restaurantId, List<ItemDto> itemsDto) {
-
+    public OrderDto createOrder(UUID restaurantId, List<ItemDto> itemsDto) {
         List<Item> items = itemsDto.stream()
                 .map(itemMapper::toEntity)
                 .collect(Collectors.toList());
-        return orderMapper.toDto(orderService.createOrder(userId, restaurantId, items));
+        return orderMapper.toDto(orderService.createOrder(restaurantId, items));
     }
 
     @Override

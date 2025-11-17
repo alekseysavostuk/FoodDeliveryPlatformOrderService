@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +28,7 @@ public class PaymentController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get payment by id")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or @expression.isAccessPayment(#id, authentication)")
     public ResponseEntity<PaymentDto> getById(
             @PathVariable final UUID id) {
         return new ResponseEntity<>(paymentFacade.getById(id), HttpStatus.OK);

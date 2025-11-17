@@ -24,4 +24,12 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
                 )""",
             nativeQuery = true)
     Optional<Order> findOrderByItemId(@Param("itemId") UUID itemId);
+
+    @Query(value = """
+            SELECT EXISTS(
+                SELECT 1 FROM orders 
+                WHERE id = :orderId AND user_id = :userId
+            )""",
+            nativeQuery = true)
+    boolean existsByIdAndUserId(@Param("orderId") UUID orderId, @Param("userId") UUID userId);
 }

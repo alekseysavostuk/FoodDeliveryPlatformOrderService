@@ -10,7 +10,7 @@ public interface OrderFacade {
 
     OrderDto getById(UUID id);
 
-    OrderDto createOrder(UUID userId, UUID restaurantId, List<ItemDto> items);
+    OrderDto createOrder(UUID restaurantId, List<ItemDto> items);
 
     List<OrderDto> getAll();
 
