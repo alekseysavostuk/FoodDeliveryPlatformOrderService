@@ -2,7 +2,7 @@ package v1.foodDeliveryPlatform.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import v1.foodDeliveryPlatform.exception.ModelExistsException;
+import v1.foodDeliveryPlatform.exception.ResourceNotFoundException;
 import v1.foodDeliveryPlatform.model.Order;
 import v1.foodDeliveryPlatform.model.Payment;
 import v1.foodDeliveryPlatform.model.enums.PaymentMethod;
@@ -37,7 +37,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public Payment getById(UUID id) {
         return paymentRepository.findById(id).orElseThrow(() ->
-                new ModelExistsException("Payment not found"));
+                new ResourceNotFoundException("Payment not found"));
     }
 
     private PaymentMethod getRandomPaymentMethod() {

@@ -4,7 +4,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import v1.foodDeliveryPlatform.exception.ModelExistsException;
+import v1.foodDeliveryPlatform.exception.ResourceNotFoundException;
 import v1.foodDeliveryPlatform.exception.RestaurantServiceUnavailableException;
 import v1.foodDeliveryPlatform.feign.RestaurantServiceClient;
 import v1.foodDeliveryPlatform.model.Item;
@@ -31,7 +31,7 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public Item getById(UUID id) {
         return itemRepository.findById(id).orElseThrow(() ->
-                new ModelExistsException("Order not found"));
+                new ResourceNotFoundException("Order not found"));
     }
 
     @Override
@@ -42,7 +42,7 @@ public class ItemServiceImpl implements ItemService {
                     item.getDish_id());
 
             if (!dishExists) {
-                throw new ModelExistsException("Dish not found with id: " + item.getDish_id());
+                throw new ResourceNotFoundException("Dish not found with id: " + item.getDish_id());
             }
             Order order = orderService.getById(orderId);
             item.setOrder(order);
@@ -83,7 +83,7 @@ public class ItemServiceImpl implements ItemService {
                     item.getDish_id());
 
             if (!dishExists) {
-                throw new ModelExistsException("Dish not found with id: " + item.getDish_id());
+                throw new ResourceNotFoundException("Dish not found with id: " + item.getDish_id());
             }
 
             Order order = currentItem.getOrder();
@@ -127,7 +127,7 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     public void delete(UUID id) {
         Order order = orderRepository.findOrderByItemId(id).orElseThrow(() ->
-                new ModelExistsException("Order not found"));
+                new ResourceNotFoundException("Order not found"));
         itemRepository.deleteDirectlyById(id);
         order.getItems().removeIf(item -> item.getId().equals(id));
         updateOrderTotalPrice(order);

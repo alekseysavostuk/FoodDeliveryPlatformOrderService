@@ -18,19 +18,26 @@ public class FeignConfig {
             try {
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+                log.info("=== FEIGN DEBUG ===");
+                log.info("URL: {}", requestTemplate.url());
+                log.info("Authentication: {}", authentication);
+                log.info("Is authenticated: {}", authentication != null && authentication.isAuthenticated());
+
                 if (authentication != null && authentication.isAuthenticated()) {
+                    log.info("Principal class: {}", authentication.getPrincipal().getClass().getName());
+
                     if (authentication.getPrincipal() instanceof Jwt jwt) {
                         String token = jwt.getTokenValue();
                         requestTemplate.header("Authorization", "Bearer " + token);
-                        log.debug("JWT token added to Feign request");
+                        log.info("JWT token added to Feign request");
                     } else {
-                        log.warn("Authentication principal is not JWT. Cannot add token to Feign request");
+                        log.warn("Principal is not JWT, it's: {}", authentication.getPrincipal().getClass().getSimpleName());
                     }
                 } else {
-                    log.warn("No authentication found. Feign request will be without JWT token");
+                    log.warn("No authentication found in SecurityContext");
                 }
             } catch (Exception e) {
-                log.error("Failed to add JWT token to Feign request", e);
+                log.error("Error in FeignConfig", e);
             }
         };
     }
