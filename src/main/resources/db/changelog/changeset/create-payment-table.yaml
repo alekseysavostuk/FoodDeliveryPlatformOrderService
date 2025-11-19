@@ -34,3 +34,15 @@ databaseChangeLog:
                   constraints:
                     nullable: false
                     unique: true
+        - addForeignKeyConstraint:
+            baseTableName: payment
+            baseColumnNames: order_id
+            constraintName: fk_payment_order
+            referencedTableName: orders
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_payment_order_id
+            tableName: payment
+            columns:
+              - column:
+                  name: order_id

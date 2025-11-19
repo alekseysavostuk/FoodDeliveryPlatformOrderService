@@ -33,3 +33,35 @@ databaseChangeLog:
                   type: uuid
                   constraints:
                     nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: order_item
+            baseColumnNames: order_id
+            constraintName: fk_order_item_order
+            referencedTableName: orders
+            referencedColumnNames: id
+        - createIndex:
+            indexName: idx_order_item_order_id
+            tableName: order_item
+            columns:
+              - column:
+                  name: order_id
+        - createIndex:
+            indexName: idx_order_item_dish_id
+            tableName: order_item
+            columns:
+              - column:
+                  name: dish_id
+        - createIndex:
+            indexName: idx_order_item_order_dish
+            tableName: order_item
+            columns:
+              - column:
+                  name: order_id
+              - column:
+                  name: dish_id
+        - createIndex:
+            indexName: idx_order_item_price
+            tableName: order_item
+            columns:
+              - column:
+                  name: price
