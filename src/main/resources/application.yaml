@@ -12,7 +12,7 @@ spring:
       key-prefix: "app:"
       use-key-prefix: true
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -73,7 +73,7 @@ feign:
         readTimeout: 5000
 restaurant:
   service:
-    url: http://restaurant:8080/api/v1
+    url: ${RESTAURANT_ENDPOINT}
 resilience4j:
   circuitbreaker:
     instances:
