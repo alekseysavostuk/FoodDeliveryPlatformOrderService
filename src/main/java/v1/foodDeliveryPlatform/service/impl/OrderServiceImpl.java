@@ -1,9 +1,12 @@
 package v1.foodDeliveryPlatform.service.impl;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import v1.foodDeliveryPlatform.exception.ResourceNotFoundException;
 import v1.foodDeliveryPlatform.exception.RestaurantServiceUnavailableException;
 import v1.foodDeliveryPlatform.feign.RestaurantServiceClient;
@@ -37,6 +40,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderEventProducer orderEventProducer;
 
     @Override
+    @Transactional
+    @Cacheable(value = "orders", key = "#id")
     public Order getById(UUID id) {
         return orderRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Order not found"));
@@ -44,6 +49,11 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "orders", allEntries = true),
+            @CacheEvict(value = "user_orders", allEntries = true),
+            @CacheEvict(value = "all_orders", allEntries = true)
+    })
     public Order createOrder(UUID restaurantId, List<Item> items) {
         try {
             boolean restaurantExists = restaurantServiceClient.existsRestaurant(restaurantId);
@@ -81,11 +91,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
+    @Cacheable(value = "all_orders")
     public List<Order> getAll() {
         return orderRepository.findAll();
     }
 
     @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "orders", key = "#id"),
+            @CacheEvict(value = "user_orders", key = "#result.userId"),
+            @CacheEvict(value = "all_orders", allEntries = true)
+    })
     public Order updateOrderStatus(UUID id) {
         Order currentOrder = getById(id);
         if (!currentOrder.getStatus().equals(OrderStatus.DONE)) {
@@ -126,12 +144,19 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "orders", key = "#id"),
+            @CacheEvict(value = "user_orders", allEntries = true),
+            @CacheEvict(value = "all_orders", allEntries = true)
+    })
     public void delete(UUID id) {
         orderRepository.deleteById(id);
     }
 
     @Override
     @Transactional
+    @Cacheable(value = "user_orders", key = "#userId")
     public List<Order> getAllByUserId(UUID userId) {
         return orderRepository.findAllByUserId(userId);
     }

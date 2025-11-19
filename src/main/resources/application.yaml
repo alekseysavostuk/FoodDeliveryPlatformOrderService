@@ -1,4 +1,16 @@
 spring:
+  data:
+    redis:
+      host: redis-orders
+      port: 6379
+      password: ${REDIS_ORDERS_PASSWORD}
+  cache:
+    type: redis
+    redis:
+      time-to-live: 3600000
+      cache-null-values: false
+      key-prefix: "app:"
+      use-key-prefix: true
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:kafka:9092}
     producer:

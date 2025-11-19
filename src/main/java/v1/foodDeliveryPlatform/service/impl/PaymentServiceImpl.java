@@ -1,7 +1,10 @@
 package v1.foodDeliveryPlatform.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import v1.foodDeliveryPlatform.exception.ResourceNotFoundException;
 import v1.foodDeliveryPlatform.model.Order;
 import v1.foodDeliveryPlatform.model.Payment;
@@ -23,6 +26,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final Random random;
 
     @Override
+    @Transactional
+    @CacheEvict(value = {"payments", "order_payments"}, allEntries = true)
     public Payment isOrderPaid(UUID orderId) {
         Order order = orderService.getById(orderId);
         Payment payment = Payment.builder()
@@ -35,6 +40,8 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
+    @Transactional
+    @Cacheable(value = "payments", key = "#id")
     public Payment getById(UUID id) {
         return paymentRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Payment not found"));

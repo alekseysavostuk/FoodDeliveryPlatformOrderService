@@ -1,9 +1,12 @@
 package v1.foodDeliveryPlatform.service.impl;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import v1.foodDeliveryPlatform.exception.ResourceNotFoundException;
 import v1.foodDeliveryPlatform.exception.RestaurantServiceUnavailableException;
 import v1.foodDeliveryPlatform.feign.RestaurantServiceClient;
@@ -29,12 +32,21 @@ public class ItemServiceImpl implements ItemService {
     private final RestaurantServiceClient restaurantServiceClient;
 
     @Override
+    @Transactional
+    @Cacheable(value = "items", key = "#id")
     public Item getById(UUID id) {
         return itemRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("Order not found"));
     }
 
     @Override
+    @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "items", allEntries = true),
+            @CacheEvict(value = "order_items", key = "#orderId"),
+            @CacheEvict(value = "orders", key = "#orderId"),
+            @CacheEvict(value = "user_orders", allEntries = true)
+    })
     public Item createItem(Item item, UUID orderId) {
         try {
             boolean dishExists = restaurantServiceClient.existsDish(
@@ -75,6 +87,12 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "items", key = "#item.id"),
+            @CacheEvict(value = "order_items", key = "#result.order.id"),
+            @CacheEvict(value = "orders", key = "#result.order.id"),
+            @CacheEvict(value = "user_orders", key = "#result.order.userId")
+    })
     public Item updateItem(Item item) {
         try {
             Item currentItem = getById(item.getId());
@@ -119,12 +137,19 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
+    @Cacheable(value = "order_items", key = "#orderId")
     public List<Item> getAllByOrderId(UUID orderId) {
         return itemRepository.findAllByOrderId(orderId);
     }
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "items", key = "#id"),
+            @CacheEvict(value = "order_items", allEntries = true),
+            @CacheEvict(value = "orders", allEntries = true),
+            @CacheEvict(value = "user_orders", allEntries = true)
+    })
     public void delete(UUID id) {
         Order order = orderRepository.findOrderByItemId(id).orElseThrow(() ->
                 new ResourceNotFoundException("Order not found"));
@@ -133,9 +158,10 @@ public class ItemServiceImpl implements ItemService {
         updateOrderTotalPrice(order);
     }
 
+    @Transactional
+    @CacheEvict(value = {"orders", "user_orders"}, key = "#order.id")
     private void updateOrderTotalPrice(Order order) {
         order.setTotalPrice(orderService.calculateTotalPrice(order.getItems()));
         orderRepository.save(order);
     }
-
 }
