@@ -43,8 +43,14 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     @Cacheable(value = "orders", key = "#id")
     public Order getById(UUID id) {
-        return orderRepository.findById(id).orElseThrow(() ->
-                new ResourceNotFoundException("Order not found"));
+        log.debug("Fetching order by ID: {}", id);
+        Order order = orderRepository.findById(id).orElseThrow(() -> {
+            log.warn("Order not found with ID: {}", id);
+            return new ResourceNotFoundException("Order not found");
+        });
+        log.debug("Successfully fetched order: {} (Status: {}, User: {})",
+                id, order.getStatus(), order.getUserId());
+        return order;
     }
 
     @Override
@@ -55,35 +61,53 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "all_orders", allEntries = true)
     })
     public Order createOrder(UUID restaurantId, List<Item> items) {
+        log.info("Creating new order for restaurant: {} with {} items", restaurantId, items.size());
+
         try {
+            log.debug("Validating restaurant existence: {}", restaurantId);
             boolean restaurantExists = restaurantServiceClient.existsRestaurant(restaurantId);
+
+            log.debug("Validating {} dishes in order", items.size());
             for (Item item : items) {
                 boolean dishExists = restaurantServiceClient.existsDish(restaurantId, item.getDish_id());
                 if (!dishExists) {
+                    log.warn("Dish not found - DishId: {}, RestaurantId: {}", item.getDish_id(), restaurantId);
                     throw new ResourceNotFoundException("Dish not found with id: " + item.getDish_id());
                 }
             }
+
             if (!restaurantExists) {
+                log.warn("Restaurant not found: {}", restaurantId);
                 throw new ResourceNotFoundException("Restaurant not found with id: " + restaurantId);
             }
+
+            UUID currentUserId = securityUtils.getCurrentUserId();
+            BigDecimal totalPrice = calculateTotalPrice(items);
+
+            log.debug("Building order - User: {}, Total: {}, Items: {}", currentUserId, totalPrice, items.size());
 
             Order order = Order.builder()
                     .status(OrderStatus.NEW)
                     .orderDate(LocalDateTime.now())
-                    .userId(securityUtils.getCurrentUserId())
+                    .userId(currentUserId)
                     .restaurantId(restaurantId)
-                    .totalPrice(calculateTotalPrice(items))
+                    .totalPrice(totalPrice)
                     .items(new ArrayList<>())
                     .build();
 
             Order savedOrder = orderRepository.save(order);
+            log.debug("Order saved with ID: {}", savedOrder.getId());
 
             for (Item item : items) {
                 item.setOrder(savedOrder);
                 order.getItems().add(item);
                 itemRepository.save(item);
             }
+
+            log.info("Order created successfully - OrderId: {}, User: {}, Restaurant: {}, Total: {}",
+                    savedOrder.getId(), currentUserId, restaurantId, totalPrice);
             return savedOrder;
+
         } catch (RestaurantServiceUnavailableException e) {
             log.error("Failed to create order due to restaurant service unavailability: {}", e.getMessage());
             throw e;
@@ -94,7 +118,10 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     @Cacheable(value = "all_orders")
     public List<Order> getAll() {
-        return orderRepository.findAll();
+        log.debug("Fetching all orders");
+        List<Order> orders = orderRepository.findAll();
+        log.debug("Found {} total orders", orders.size());
+        return orders;
     }
 
     @Override
@@ -105,13 +132,20 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "all_orders", allEntries = true)
     })
     public Order updateOrderStatus(UUID id) {
+        log.info("Updating order status for order: {}", id);
+
         Order currentOrder = getById(id);
+        OrderStatus oldStatus = currentOrder.getStatus();
+
         if (!currentOrder.getStatus().equals(OrderStatus.DONE)) {
             OrderStatus nextStatus = getNextStatus(currentOrder.getStatus());
             currentOrder.setStatus(nextStatus);
+            log.debug("Order status changed: {} -> {}", oldStatus, nextStatus);
+        } else {
+            log.debug("Order already completed, status remains: {}", OrderStatus.DONE);
         }
-        orderRepository.save(currentOrder);
 
+        orderRepository.save(currentOrder);
         log.info("Order {} status updated to: {}", id, currentOrder.getStatus());
 
         if (currentOrder.getStatus().equals(OrderStatus.DONE)) {
@@ -151,28 +185,44 @@ public class OrderServiceImpl implements OrderService {
             @CacheEvict(value = "all_orders", allEntries = true)
     })
     public void delete(UUID id) {
-        orderRepository.deleteById(id);
+        log.info("Deleting order: {}", id);
+        try {
+            orderRepository.deleteById(id);
+            log.info("Order deleted successfully: {}", id);
+        } catch (Exception e) {
+            log.error("Failed to delete order: {}", id, e);
+            throw e;
+        }
     }
 
     @Override
     @Transactional
     @Cacheable(value = "user_orders", key = "#userId")
     public List<Order> getAllByUserId(UUID userId) {
-        return orderRepository.findAllByUserId(userId);
+        log.debug("Fetching all orders for user: {}", userId);
+        List<Order> orders = orderRepository.findAllByUserId(userId);
+        log.debug("Found {} orders for user: {}", orders.size(), userId);
+        return orders;
     }
 
     private OrderStatus getNextStatus(OrderStatus currentStatus) {
-        return switch (currentStatus) {
+        log.trace("Getting next status for: {}", currentStatus);
+        OrderStatus nextStatus = switch (currentStatus) {
             case NEW -> OrderStatus.IN_PROGRESS;
             case IN_PROGRESS -> OrderStatus.DONE;
             case DONE -> throw new IllegalStateException("Order is already completed");
         };
+        log.trace("Next status: {} -> {}", currentStatus, nextStatus);
+        return nextStatus;
     }
 
     @Override
     public BigDecimal calculateTotalPrice(List<Item> items) {
-        return items.stream()
+        log.trace("Calculating total price for {} items", items.size());
+        BigDecimal total = items.stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        log.trace("Total price calculated: {}", total);
+        return total;
     }
 }

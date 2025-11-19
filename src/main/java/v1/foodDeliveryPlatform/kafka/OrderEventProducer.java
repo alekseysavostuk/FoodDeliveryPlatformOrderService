@@ -28,8 +28,7 @@ public class OrderEventProducer {
     private final RestaurantServiceClient restaurantServiceClient;
 
     public CompletableFuture<SendResult<String, String>> sendOrderCompleted(OrderCompletedEvent event) {
-        log.info("=== KAFKA PRODUCER STARTING ===");
-        log.info("Preparing to send order completed event for order: {}", event.getOrderId());
+        log.info("Sending order completed event - Order: {}", event.getOrderId());
 
         event.setEventId(UUID.randomUUID().toString());
 
@@ -43,81 +42,76 @@ public class OrderEventProducer {
             enrichEventWithNames(event);
 
             String message = objectMapper.writeValueAsString(event);
-            log.info("Serialized event message: {}", message);
+            log.debug("Event serialized - Order: {}, EventId: {}", event.getOrderId(), event.getEventId());
 
-            log.info("Sending to Kafka topic: order-completed, key: {}", event.getOrderId());
+            log.debug("Sending to Kafka - Topic: order-completed, Key: {}", event.getOrderId());
 
             return kafkaTemplate.send("order-completed", event.getOrderId(), message)
                     .whenComplete((result, throwable) -> {
                         sample.stop(kafkaTimer);
 
                         if (throwable != null) {
-                            log.error("=== KAFKA PRODUCER FAILED ===");
-                            log.error("Failed to send order completed event for order: {}", event.getOrderId(), throwable);
+                            log.error("Failed to send order event - Order: {}, Error: {}",
+                                    event.getOrderId(), throwable.getMessage());
                             errorCounter.increment();
                             meterRegistry.counter("kafka.producer.failures",
                                             "topic", "order-completed",
                                             "error", throwable.getClass().getSimpleName())
                                     .increment();
                         } else {
-                            log.info("=== KAFKA PRODUCER SUCCESS ===");
-                            log.info("Order completed event sent successfully!");
-                            log.info("Order ID: {}", event.getOrderId());
-                            log.info("Event ID: {}", event.getEventId());
-                            log.info("Restaurant: {}", event.getRestaurantName());
-                            log.info("Partition: {}, Offset: {}",
+                            log.info("Order event sent successfully - Order: {}, Partition: {}, Offset: {}",
+                                    event.getOrderId(),
                                     result.getRecordMetadata().partition(),
                                     result.getRecordMetadata().offset());
-                            log.info("Topic: {}", result.getRecordMetadata().topic());
                             successCounter.increment();
                         }
                     });
         } catch (Exception e) {
-            log.error("=== KAFKA PRODUCER ERROR ===");
-            log.error("Error processing order event for order: {}", event.getOrderId(), e);
+            log.error("Error processing order event - Order: {}, Error: {}",
+                    event.getOrderId(), e.getMessage());
             errorCounter.increment();
             return CompletableFuture.failedFuture(e);
         }
     }
 
     private void enrichEventWithNames(OrderCompletedEvent event) {
-        log.info("Enriching event with restaurant and dish names for order: {}", event.getOrderId());
+        log.debug("Enriching event with names - Order: {}", event.getOrderId());
 
         try {
             RestaurantClientDto restaurantDto = restaurantServiceClient.getRestaurantName(UUID.fromString(event.getRestaurantId()));
             event.setRestaurantName(restaurantDto.getRestaurantName());
-            log.info("Retrieved restaurant name: {} for ID: {}", event.getRestaurantName(), event.getRestaurantId());
+            log.debug("Restaurant name retrieved - ID: {}, Name: {}",
+                    event.getRestaurantId(), event.getRestaurantName());
         } catch (Exception e) {
-            log.warn("Failed to get restaurant name for ID: {}, using fallback", event.getRestaurantId(), e);
+            log.warn("Failed to get restaurant name - ID: {}, using fallback", event.getRestaurantId());
             event.setRestaurantName("Unknown Restaurant");
         }
 
+        int successfulDishNames = 0;
         for (OrderCompletedEvent.OrderItem item : event.getItems()) {
             try {
                 DishClientDto dishDto = restaurantServiceClient.getDishName(UUID.fromString(item.getDishId()));
                 item.setDishName(dishDto.getDishName());
-                log.info("Retrieved dish name: {} for ID: {}", item.getDishName(), item.getDishId());
+                successfulDishNames++;
+                log.trace("Dish name retrieved - ID: {}, Name: {}", item.getDishId(), item.getDishName());
             } catch (Exception e) {
-                log.warn("Failed to get dish name for ID: {}, using fallback", item.getDishId(), e);
+                log.warn("Failed to get dish name - ID: {}, using fallback", item.getDishId());
                 item.setDishName("Unknown Dish");
             }
         }
 
-        log.info("Event enriched successfully for order: {}", event.getOrderId());
-        log.info("Restaurant: {}, Dishes count: {}", event.getRestaurantName(), event.getItems().size());
+        log.debug("Event enriched - Order: {}, Restaurant: {}, Successful dish names: {}/{}",
+                event.getOrderId(), event.getRestaurantName(), successfulDishNames, event.getItems().size());
     }
 
     public void sendOrderCompletedWithCallback(OrderCompletedEvent event) {
-        log.info("Starting send for order: {}", event.getOrderId());
+        log.debug("Sending order with callback - Order: {}", event.getOrderId());
         sendOrderCompleted(event)
                 .thenAccept(result -> {
-                    log.info("=== KAFKA PRODUCER CALLBACK SUCCESS ===");
-                    log.info("Order {} completed event acknowledged", event.getOrderId());
+                    log.debug("Order event callback success - Order: {}", event.getOrderId());
                 })
                 .exceptionally(throwable -> {
-                    log.error("=== KAFKA PRODUCER CALLBACK FAILED ===");
-                    log.error("Failed to send order completed event with callback for order: {}",
-                            event.getOrderId(), throwable);
+                    log.error("Order event callback failed - Order: {}", event.getOrderId(), throwable);
                     return null;
                 });
     }
