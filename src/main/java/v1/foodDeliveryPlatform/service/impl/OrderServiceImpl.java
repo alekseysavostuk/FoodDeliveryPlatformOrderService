@@ -116,7 +116,6 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    @Cacheable(value = "all_orders")
     public List<Order> getAll() {
         log.debug("Fetching all orders");
         List<Order> orders = orderRepository.findAll();
@@ -198,7 +197,6 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    @Cacheable(value = "user_orders", key = "#userId")
     public List<Order> getAllByUserId(UUID userId) {
         log.debug("Fetching all orders for user: {}", userId);
         List<Order> orders = orderRepository.findAllByUserId(userId);

@@ -179,7 +179,6 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional
-    @Cacheable(value = "order_items", key = "#orderId")
     public List<Item> getAllByOrderId(UUID orderId) {
         log.debug("Fetching all items for order: {}", orderId);
         List<Item> items = itemRepository.findAllByOrderId(orderId);
