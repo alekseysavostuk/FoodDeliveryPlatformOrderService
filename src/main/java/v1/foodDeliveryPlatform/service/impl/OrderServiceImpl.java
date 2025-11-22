@@ -143,6 +143,7 @@ public class OrderServiceImpl implements OrderService {
             log.debug("Order status changed: {} -> {}", oldStatus, nextStatus);
         } else {
             log.debug("Order already completed, status remains: {}", OrderStatus.DONE);
+            return currentOrder;
         }
 
         orderRepository.save(currentOrder);

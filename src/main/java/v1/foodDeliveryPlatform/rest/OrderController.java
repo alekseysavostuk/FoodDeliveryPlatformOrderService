@@ -2,6 +2,7 @@ package v1.foodDeliveryPlatform.rest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -56,7 +57,7 @@ public class OrderController {
     public ResponseEntity<OrderDto> createOrder(
             @Validated(OnCreate.class)
             @RequestParam UUID restaurantId,
-            @RequestBody List<ItemDto> items) {
+            @RequestBody @Valid List<ItemDto> items) {
         return new ResponseEntity<>(orderFacade.createOrder(restaurantId, items), HttpStatus.CREATED);
     }
 
