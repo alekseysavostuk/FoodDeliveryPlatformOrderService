@@ -23,6 +23,12 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/orders")
+@CrossOrigin(
+        origins = "http://localhost:5173",
+        allowedHeaders = "*",
+        methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.OPTIONS},
+        allowCredentials = "true"
+)
 @AllArgsConstructor
 @Tag(
         name = "Order Controller",
@@ -108,7 +114,8 @@ public class OrderController {
     @PreAuthorize("hasAuthority('ROLE_ADMIN') or @expression.isAccessOrder(#id, authentication)")
     public ResponseEntity<PaymentDto> isOrderPaid(
             @Validated(OnCreate.class)
+            @RequestBody PaymentDto paymentDto,
             @PathVariable final UUID id) {
-        return new ResponseEntity<>(paymentFacade.isOrderPaid(id), HttpStatus.CREATED);
+        return new ResponseEntity<>(paymentFacade.isOrderPaid(id, paymentDto), HttpStatus.CREATED);
     }
 }

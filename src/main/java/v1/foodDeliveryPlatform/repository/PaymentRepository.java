@@ -20,4 +20,11 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
         )""",
             nativeQuery = true)
     boolean existsByIdAndOrderUserId(@Param("paymentId") UUID paymentId, @Param("userId") UUID userId);
+
+    @Query(value = """
+        SELECT * FROM payment 
+        WHERE order_id = :orderId 
+        """,
+            nativeQuery = true)
+    Optional<Payment> findByOrderId(@Param("orderId") UUID orderId);
 }

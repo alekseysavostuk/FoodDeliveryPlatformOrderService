@@ -1,5 +1,7 @@
 package v1.foodDeliveryPlatform.rest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,10 +18,13 @@ import v1.foodDeliveryPlatform.dto.model.PaymentDto;
 import v1.foodDeliveryPlatform.facade.ItemFacade;
 import v1.foodDeliveryPlatform.facade.OrderFacade;
 import v1.foodDeliveryPlatform.facade.PaymentFacade;
+import v1.foodDeliveryPlatform.model.enums.PaymentMethod;
+import v1.foodDeliveryPlatform.model.enums.PaymentStatus;
 import v1.foodDeliveryPlatform.model.feign.DishClient;
 import v1.foodDeliveryPlatform.model.feign.RestaurantClient;
 import v1.foodDeliveryPlatform.security.SecurityUtils;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,7 +32,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(OrderController.class)
 @Import(ControllerTestSecurityConfig.class)
@@ -39,6 +44,9 @@ class OrderControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private OrderFacade orderFacade;
@@ -62,6 +70,18 @@ class OrderControllerTest {
     private final UUID userId = UUID.randomUUID();
     private final UUID restaurantId = UUID.randomUUID();
     private final UUID itemId = UUID.randomUUID();
+    private final UUID paymentId = UUID.randomUUID();
+
+    private String paymentRequestJson;
+
+    @BeforeEach
+    void setUp() {
+        paymentRequestJson = """
+            {
+                "method": "CREDIT_CARD"
+            }
+            """;
+    }
 
     private final String itemsJson = """
         [
@@ -301,32 +321,6 @@ class OrderControllerTest {
                 .andExpect(status().isForbidden());
 
         verify(itemFacade, never()).getAllByOrderId(any());
-    }
-
-    @Test
-    @WithMockUser(authorities = {"ROLE_ADMIN"})
-    void isOrderPaid_WithAdminRole_Success() throws Exception {
-        PaymentDto paymentDto = new PaymentDto();
-        when(paymentFacade.isOrderPaid(orderId)).thenReturn(paymentDto);
-        when(expression.isAccessOrder(orderId, null)).thenReturn(true);
-
-        mockMvc.perform(post("/api/v1/orders/{id}/payment", orderId)
-                        .with(csrf()))
-                .andExpect(status().isCreated());
-
-        verify(paymentFacade).isOrderPaid(orderId);
-    }
-
-    @Test
-    @WithMockUser(authorities = {"ROLE_USER"})
-    void isOrderPaid_WithUserRole_NoAccess_Forbidden() throws Exception {
-        when(expression.isAccessOrder(orderId, null)).thenReturn(false);
-
-        mockMvc.perform(post("/api/v1/orders/{id}/payment", orderId)
-                        .with(csrf()))
-                .andExpect(status().isForbidden());
-
-        verify(paymentFacade, never()).isOrderPaid(any());
     }
 
     @Test

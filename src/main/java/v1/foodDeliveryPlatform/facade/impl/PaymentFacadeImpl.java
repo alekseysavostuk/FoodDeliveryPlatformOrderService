@@ -17,8 +17,8 @@ public class PaymentFacadeImpl implements PaymentFacade {
     private final PaymentMapper mapper;
 
     @Override
-    public PaymentDto isOrderPaid(UUID orderId) {
-        return mapper.toDto(paymentService.isOrderPaid(orderId));
+    public PaymentDto isOrderPaid(UUID orderId, PaymentDto paymentDto) {
+        return mapper.toDto(paymentService.isOrderPaid(orderId, paymentDto.getMethod()));
     }
 
     @Override

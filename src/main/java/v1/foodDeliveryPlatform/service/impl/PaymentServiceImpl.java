@@ -15,6 +15,7 @@ import v1.foodDeliveryPlatform.repository.PaymentRepository;
 import v1.foodDeliveryPlatform.service.OrderService;
 import v1.foodDeliveryPlatform.service.PaymentService;
 
+import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
 
@@ -30,17 +31,23 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     @CacheEvict(value = {"payments", "order_payments"}, allEntries = true)
-    public Payment isOrderPaid(UUID orderId) {
+    public Payment isOrderPaid(UUID orderId, String method) {
         log.info("Processing payment for order: {}", orderId);
 
         Order order = orderService.getById(orderId);
+        if (paymentRepository.findByOrderId(orderId).isPresent()) {
+            Payment existingPayment = paymentRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new IllegalStateException("Payment not found for order: " + orderId));
+            log.info("Order: {} already paid", orderId);
+            return existingPayment;
+        }
         log.debug("Order found - Total price: {}, Status: {}", order.getTotalPrice(), order.getStatus());
 
-        PaymentMethod paymentMethod = getRandomPaymentMethod();
+        String paymentMethod = setPaymentMethod(method);
         log.debug("Selected payment method: {}", paymentMethod);
 
         Payment payment = Payment.builder()
-                .method(paymentMethod.name())
+                .method(paymentMethod)
                 .order(order)
                 .amount(order.getTotalPrice())
                 .status(PaymentStatus.Paid)
@@ -67,10 +74,12 @@ public class PaymentServiceImpl implements PaymentService {
         return payment;
     }
 
-    private PaymentMethod getRandomPaymentMethod() {
-        PaymentMethod[] methods = PaymentMethod.values();
-        PaymentMethod selectedMethod = methods[random.nextInt(methods.length)];
-        log.trace("Random payment method selected: {}", selectedMethod);
-        return selectedMethod;
+    private String setPaymentMethod(String method) {
+        Arrays.stream(PaymentMethod.values())
+                .filter(pm -> pm.name().equalsIgnoreCase(method))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Invalid payment method: " + method));
+
+        return method;
     }
 }

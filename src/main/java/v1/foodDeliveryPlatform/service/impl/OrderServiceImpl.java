@@ -41,7 +41,10 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    @Cacheable(value = "orders", key = "#id")
+    @Caching(evict = {
+            @CacheEvict(value = "orders", key = "#id"), // Изменяем на #id
+            @CacheEvict(value = {"payments", "order_payments"}, allEntries = true)
+    })
     public Order getById(UUID id) {
         log.debug("Fetching order by ID: {}", id);
         Order order = orderRepository.findById(id).orElseThrow(() -> {

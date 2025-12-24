@@ -20,7 +20,6 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,16 +45,17 @@ class PaymentServiceImplTest {
     @Test
     void isOrderPaid_Success() {
 
+        String paymentMethod = "CREDIT_CARD";
         Order order = createTestOrder();
+
         when(orderService.getById(orderId)).thenReturn(order);
-        when(random.nextInt(anyInt())).thenReturn(0);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
             Payment payment = invocation.getArgument(0);
             payment.setId(paymentId);
             return payment;
         });
 
-        Payment result = paymentService.isOrderPaid(orderId);
+        Payment result = paymentService.isOrderPaid(orderId, paymentMethod);
 
         assertNotNull(result);
         assertEquals(paymentId, result.getId());
@@ -65,70 +65,91 @@ class PaymentServiceImplTest {
         assertEquals("CREDIT_CARD", result.getMethod());
 
         verify(orderService).getById(orderId);
-        verify(random).nextInt(PaymentMethod.values().length);
         verify(paymentRepository).save(any(Payment.class));
     }
 
     @Test
-    void isOrderPaid_WithDifferentPaymentMethod() {
+    void isOrderPaid_WithDifferentPaymentMethods() {
 
         Order order = createTestOrder();
         when(orderService.getById(orderId)).thenReturn(order);
-        when(random.nextInt(anyInt())).thenReturn(1);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
             Payment payment = invocation.getArgument(0);
             payment.setId(paymentId);
             return payment;
         });
 
-        Payment result = paymentService.isOrderPaid(orderId);
+        for (PaymentMethod method : PaymentMethod.values()) {
 
-        assertNotNull(result);
-        assertEquals(PaymentStatus.Paid, result.getStatus());
+            Payment result = paymentService.isOrderPaid(orderId, method.name());
 
-        assertTrue(Arrays.stream(PaymentMethod.values())
-                .anyMatch(method -> method.name().equals(result.getMethod())));
+            assertNotNull(result);
+            assertEquals(PaymentStatus.Paid, result.getStatus());
+            assertEquals(method.name().toUpperCase(), result.getMethod().toUpperCase());
+        }
 
-        verify(orderService).getById(orderId);
-        verify(random).nextInt(PaymentMethod.values().length);
-        verify(paymentRepository).save(any(Payment.class));
+        verify(orderService, times(PaymentMethod.values().length)).getById(orderId);
+        verify(paymentRepository, times(PaymentMethod.values().length)).save(any(Payment.class));
     }
 
     @Test
-    void isOrderPaid_AllPaymentMethodsCovered() {
+    void isOrderPaid_WithInvalidPaymentMethod() {
 
         Order order = createTestOrder();
-        PaymentMethod[] methods = PaymentMethod.values();
+        String invalidMethod = "INVALID_METHOD";
 
-        for (int i = 0; i < methods.length; i++) {
-            when(orderService.getById(orderId)).thenReturn(order);
-            when(random.nextInt(methods.length)).thenReturn(i);
-            when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
-                Payment payment = invocation.getArgument(0);
-                payment.setId(paymentId);
-                return payment;
-            });
+        when(orderService.getById(orderId)).thenReturn(order);
 
-            Payment result = paymentService.isOrderPaid(orderId);
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> paymentService.isOrderPaid(orderId, invalidMethod));
 
-            assertNotNull(result);
-            assertEquals(methods[i].name(), result.getMethod());
+        assertTrue(exception.getMessage().contains("Invalid payment method"));
 
-            reset(orderService, random, paymentRepository);
-        }
+        verify(orderService).getById(orderId);
+        verify(paymentRepository, never()).save(any());
     }
 
     @Test
     void isOrderPaid_OrderNotFound() {
 
+        String paymentMethod = "CREDIT_CARD";
         when(orderService.getById(orderId)).thenThrow(new ResourceNotFoundException("Order not found"));
 
         ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                () -> paymentService.isOrderPaid(orderId));
+                () -> paymentService.isOrderPaid(orderId, paymentMethod));
 
         assertEquals("Order not found", exception.getMessage());
         verify(orderService).getById(orderId);
-        verify(random, never()).nextInt(anyInt());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void isOrderPaid_WithNullPaymentMethod() {
+
+        Order order = createTestOrder();
+        when(orderService.getById(orderId)).thenReturn(order);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> paymentService.isOrderPaid(orderId, null));
+
+        assertTrue(exception.getMessage().contains("Invalid payment method"));
+
+        verify(orderService).getById(orderId);
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void isOrderPaid_WithEmptyPaymentMethod() {
+
+        Order order = createTestOrder();
+        when(orderService.getById(orderId)).thenReturn(order);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> paymentService.isOrderPaid(orderId, ""));
+
+        assertTrue(exception.getMessage().contains("Invalid payment method"));
+
+        verify(orderService).getById(orderId);
         verify(paymentRepository, never()).save(any());
     }
 
@@ -163,18 +184,18 @@ class PaymentServiceImplTest {
     void isOrderPaid_UsesCorrectOrderTotalPrice() {
 
         BigDecimal expectedTotal = new BigDecimal("99.99");
+        String paymentMethod = "CREDIT_CARD";
         Order order = createTestOrder();
         order.setTotalPrice(expectedTotal);
 
         when(orderService.getById(orderId)).thenReturn(order);
-        when(random.nextInt(anyInt())).thenReturn(0);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
             Payment payment = invocation.getArgument(0);
             payment.setId(paymentId);
             return payment;
         });
 
-        Payment result = paymentService.isOrderPaid(orderId);
+        Payment result = paymentService.isOrderPaid(orderId, paymentMethod);
 
         assertNotNull(result);
         assertEquals(expectedTotal, result.getAmount());
@@ -184,21 +205,39 @@ class PaymentServiceImplTest {
 
     @Test
     void isOrderPaid_PaymentAlwaysHasPaidStatus() {
-
+        // Given
+        String paymentMethod = "CREDIT_CARD";
         Order order = createTestOrder();
         when(orderService.getById(orderId)).thenReturn(order);
-        when(random.nextInt(anyInt())).thenReturn(0);
         when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
             Payment payment = invocation.getArgument(0);
             payment.setId(paymentId);
             return payment;
         });
 
-        Payment result = paymentService.isOrderPaid(orderId);
+        Payment result = paymentService.isOrderPaid(orderId, paymentMethod);
 
         assertNotNull(result);
         assertEquals(PaymentStatus.Paid, result.getStatus());
         verify(paymentRepository).save(any(Payment.class));
+    }
+
+    @Test
+    void setPaymentMethod_ValidMethod_ReturnsMethodName() {
+
+        Order order = createTestOrder();
+        String paymentMethod = "CREDIT_CARD";
+
+        when(orderService.getById(orderId)).thenReturn(order);
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(invocation -> {
+            Payment payment = invocation.getArgument(0);
+            payment.setId(paymentId);
+            return payment;
+        });
+
+        Payment result = paymentService.isOrderPaid(orderId, paymentMethod);
+
+        assertEquals(paymentMethod.toUpperCase(), result.getMethod());
     }
 
     private Order createTestOrder() {

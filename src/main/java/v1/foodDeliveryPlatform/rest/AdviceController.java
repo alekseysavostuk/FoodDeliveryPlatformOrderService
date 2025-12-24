@@ -41,6 +41,20 @@ public class AdviceController {
         return new ExceptionBody(e.getMessage());
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ExceptionBody handleIllegalArgumentException(
+            final IllegalArgumentException e
+    ) {
+
+        ExceptionBody exceptionBody = new ExceptionBody(e.getMessage());
+
+        Map<String, String> errorDetails = new HashMap<>();
+        errorDetails.put("message", e.getMessage());
+
+        return exceptionBody;
+    }
+
     @ExceptionHandler(HandlerMethodValidationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ExceptionBody handleHandlerMethodValidation(
