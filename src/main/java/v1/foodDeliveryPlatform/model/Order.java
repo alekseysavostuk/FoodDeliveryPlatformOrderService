@@ -43,6 +43,9 @@ public class Order implements Serializable {
     @Column(name = "total_price", nullable = false)
     private BigDecimal totalPrice;
 
+    @Column(name = "is_paid", nullable = false)
+    private boolean isPaid = false;
+
     @OneToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL, mappedBy = "order")
     private List<Item> items;
 

@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import v1.foodDeliveryPlatform.model.Order;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,4 +33,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
             )""",
             nativeQuery = true)
     boolean existsByIdAndUserId(@Param("orderId") UUID orderId, @Param("userId") UUID userId);
+
+    @Query(value = "SELECT * FROM orders WHERE is_paid = false AND order_date < :date",
+            nativeQuery = true)
+    List<Order> findByPaymentStatusFalseAndCreatedAtBefore(@Param("date") LocalDateTime date);
 }

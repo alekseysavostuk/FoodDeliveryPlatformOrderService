@@ -11,6 +11,7 @@ import v1.foodDeliveryPlatform.model.Order;
 import v1.foodDeliveryPlatform.model.Payment;
 import v1.foodDeliveryPlatform.model.enums.PaymentMethod;
 import v1.foodDeliveryPlatform.model.enums.PaymentStatus;
+import v1.foodDeliveryPlatform.repository.OrderRepository;
 import v1.foodDeliveryPlatform.repository.PaymentRepository;
 import v1.foodDeliveryPlatform.service.OrderService;
 import v1.foodDeliveryPlatform.service.PaymentService;
@@ -26,7 +27,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderService orderService;
-    private final Random random;
+    private final OrderRepository orderRepository;
 
     @Override
     @Transactional
@@ -45,6 +46,9 @@ public class PaymentServiceImpl implements PaymentService {
 
         String paymentMethod = setPaymentMethod(method);
         log.debug("Selected payment method: {}", paymentMethod);
+
+        order.setPaid(true);
+        orderRepository.save(order);
 
         Payment payment = Payment.builder()
                 .method(paymentMethod)

@@ -91,6 +91,7 @@ public class OrderServiceImpl implements OrderService {
 
             Order order = Order.builder()
                     .status(OrderStatus.NEW)
+                    .isPaid(false)
                     .orderDate(LocalDateTime.now())
                     .userId(currentUserId)
                     .restaurantId(restaurantId)
@@ -221,9 +222,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public BigDecimal calculateTotalPrice(List<Item> items) {
         log.trace("Calculating total price for {} items", items.size());
-        BigDecimal total = items.stream()
+        BigDecimal subtotal = items.stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal deliveryFee = new BigDecimal("49.00");
+        BigDecimal total = subtotal.add(deliveryFee);
         log.trace("Total price calculated: {}", total);
         return total;
     }

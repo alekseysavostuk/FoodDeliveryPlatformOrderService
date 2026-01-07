@@ -34,6 +34,12 @@ databaseChangeLog:
                   constraints:
                     nullable: false
               - column:
+                  name: is_paid
+                  type: boolean
+                  defaultValue: false
+                  constraints:
+                    nullable: false
+              - column:
                   name: total_price
                   type: numeric(10, 2)
                   constraints:
